@@ -5,7 +5,7 @@ const taskSchema = new mongoose.Schema({
     title: String,
     description: String,
     status: { type: String, default: 'pending' },
-    // You might want to include a user reference here if you plan to add authentication
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 });
 
 const Task = mongoose.model('Task', taskSchema);
