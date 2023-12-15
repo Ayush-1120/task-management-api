@@ -88,11 +88,10 @@ app.post('/tasks', isAuthenticated, async (req, res) => {
     }
 });
 
-// Retrieve all tasks with pagination
+// Retrieve filtered, sorted, and paginated tasks
 app.get('/tasks', isAuthenticated, async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10; // Default limit is 10 tasks per page
+        const { sortBy, sortOrder, status, page, limit } = req.query;
 
         let query;
         if (req.user.isAdmin) {
@@ -103,16 +102,31 @@ app.get('/tasks', isAuthenticated, async (req, res) => {
             query = Task.find({ user: req.user._id });
         }
 
-        const tasks = await query
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .exec();
+        // Apply filtering based on status
+        if (status) {
+            query = query.where('status').equals(status);
+        }
+
+        // Apply sorting based on sortBy and sortOrder
+        if (sortBy) {
+            const sortDirection = sortOrder === 'desc' ? -1 : 1;
+            query = query.sort({ [sortBy]: sortDirection });
+        }
+
+        // Apply pagination
+        const pageNumber = parseInt(page) || 1;
+        const pageSize = parseInt(limit) || 10;
+        const skip = (pageNumber - 1) * pageSize;
+        query = query.skip(skip).limit(pageSize);
+
+        const tasks = await query.exec();
 
         res.json(tasks);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
+
 
 // Get task by id
 app.get('/tasks/:id', isAuthenticated, async (req, res) => {
