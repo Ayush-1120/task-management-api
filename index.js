@@ -88,15 +88,27 @@ app.post('/tasks', isAuthenticated, async (req, res) => {
     }
 });
 
-// Retrieve all tasks
+// Retrieve all tasks with pagination
 app.get('/tasks', isAuthenticated, async (req, res) => {
     try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10; // Default limit is 10 tasks per page
+
+        let query;
         if (req.user.isAdmin) {
-            const tasks = await Task.find();
-            return res.json(tasks);
+            // Admin gets all tasks
+            query = Task.find();
+        } else {
+            // Regular user gets tasks owned by them
+            query = Task.find({ user: req.user._id });
         }
-        const tasks = await Task.find({ user: req.user._id });
-        return res.json(tasks);
+
+        const tasks = await query
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .exec();
+
+        res.json(tasks);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
